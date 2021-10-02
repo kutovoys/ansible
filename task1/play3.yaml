@@ -1,0 +1,49 @@
+- hosts: nodes
+  tasks:
+    - name: Configure grub with new params
+      block:
+        - name: Check for net.ifnames
+          lineinfile:
+            path: /etc/default/grub
+            regexp: '^GRUB_CMDLINE_LINUX=".*(net.ifnames[=]\d+){1}'
+            backup: yes
+            state: absent
+          check_mode: true
+          register: check_netifnames
+          changed_when: false
+
+        - name: Check for biosdevname
+          lineinfile:
+            path: /etc/default/grub
+            regexp: '^GRUB_CMDLINE_LINUX=".*(biosdevname[=]\d+){1}'
+            backup: yes
+            state: absent
+          check_mode: true
+          register: check_biosdevname
+          changed_when: false
+
+        - name: Insert net.ifnames in config
+          lineinfile:
+            backrefs: yes
+            path: /etc/default/grub
+            state: present
+            regexp: '^(GRUB_CMDLINE_LINUX=\".*)\"$'
+            line: '\1 net.ifnames=0"'
+          when: check_netifnames.found == 0
+          notify:
+            - reconfigure grub
+
+        - name: Insert biosdevname in config
+          lineinfile:
+            backrefs: yes
+            path: /etc/default/grub
+            state: present
+            regexp: '^(GRUB_CMDLINE_LINUX=\".*)\"$'
+            line: '\1 biosdevname=0"'
+          when: check_biosdevname.found == 0
+          notify:
+            - reconfigure grub
+
+  handlers:
+    - name: reconfigure grub
+      command: grub2-mkconfig -o /boot/grub2/grub.cfg

@@ -1,0 +1,29 @@
+- hosts: nodes
+  tasks:
+    - name: Install and configure Apache
+      block:
+        - name: Install Apache
+          package: name=httpd state=latest
+
+        - name: Enable service
+          service: name=httpd state=started enabled=yes
+
+        - name: Copy index.html
+          copy: src=index.html dest=/var/www/html/index.html owner=root group=root mode=0644
+          notify:
+            - reload httpd
+
+        - name: Install firewalld
+          package: name=firewalld state=latest
+
+        - name: Open 80 port
+          firewalld: port=80/tcp  permanent=yes state=enabled
+          notify:
+            - reload firewall
+
+  handlers:
+    - name: reload firewall
+      service: name=firewalld state=reloaded
+
+    - name: reload httpd
+      service: name=httpd.service state=reloaded

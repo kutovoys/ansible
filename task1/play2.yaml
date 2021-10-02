@@ -1,0 +1,18 @@
+- hosts: nodes
+  tasks:
+    - name: Delete Apache
+      block:
+        - name: Remove Apache
+          yum: name=httpd state=absent
+
+        - name: Deleting a file
+          file: path=/var/www/html/index.html state=absent
+
+        - name: Close 80 port
+          firewalld: port=80/tcp state=disabled permanent=yes
+          notify:
+            - reload firewall
+
+  handlers:
+    - name: reload firewall
+      service: name=firewalld state=reloaded
